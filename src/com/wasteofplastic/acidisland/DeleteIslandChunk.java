@@ -16,19 +16,18 @@
  *******************************************************************************/
 package com.wasteofplastic.acidisland;
 
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
-
+import com.wasteofplastic.acidisland.nms.NMSAbstraction;
+import com.wasteofplastic.acidisland.util.Pair;
+import com.wasteofplastic.acidisland.util.Util;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import com.wasteofplastic.acidisland.nms.NMSAbstraction;
-import com.wasteofplastic.acidisland.util.Pair;
-import com.wasteofplastic.acidisland.util.Util;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 
 //import com.wasteofplastic.askyblock.nms.NMSAbstraction;
 
@@ -36,7 +35,6 @@ import com.wasteofplastic.acidisland.util.Util;
  * Deletes islands fast using chunk regeneration
  *
  * @author tastybento
- *
  */
 public class DeleteIslandChunk {
     private Set<Pair<Integer, Integer>> chunksToClear = new HashSet<>();
@@ -52,9 +50,9 @@ public class DeleteIslandChunk {
             }
         }
         if (!countUp) {
-            return (int) Math.floor((double)(x-1) / 16);
+            return (int) Math.floor((double) (x - 1) / 16);
         }
-        return (int) Math.floor((double)x / 16);
+        return (int) Math.floor((double) x / 16);
     }
 
     public DeleteIslandChunk(final ASkyBlock plugin, final Island island) {
@@ -77,7 +75,7 @@ public class DeleteIslandChunk {
                 return;
             }
             plugin.getLogger().info("Island delete: There are " + chunksToClear.size() + " chunks that need to be cleared up.");
-            plugin.getLogger().info("Clean rate is " + Settings.cleanRate + " chunks per second. Should take ~" + Math.round((float)chunksToClear.size()/Settings.cleanRate) + "s");
+            plugin.getLogger().info("Clean rate is " + Settings.cleanRate + " chunks per second. Should take ~" + Math.round((float) chunksToClear.size() / Settings.cleanRate) + "s");
             new BukkitRunnable() {
                 @SuppressWarnings("deprecation")
                 @Override
@@ -89,47 +87,51 @@ public class DeleteIslandChunk {
                         //plugin.getLogger().info("DEBUG: There are " + chunksToClear.size() + " chunks that need to be cleared up");
                         //plugin.getLogger().info("DEBUG: Deleting chunk " + pair.getLeft() + ", " + pair.getRight());
                         // Check if coords are in island space
-                        for (int x = 0; x < 16; x ++) {
-                            for (int z = 0; z < 16; z ++) {
+                        for (int x = 0; x < 16; x++) {
+                            for (int z = 0; z < 16; z++) {
                                 int xCoord = pair.x * 16 + x;
                                 int zCoord = pair.z * 16 + z;
                                 if (island.inIslandSpace(xCoord, zCoord)) {
                                     //plugin.getLogger().info(xCoord + "," + zCoord + " is in island space - deleting column");
                                     // Delete all the blocks here
-                                    for (int y = 0; y < ASkyBlock.getIslandWorld().getMaxHeight(); y ++) {
+                                    for (int y = 0; y < ASkyBlock.getIslandWorld().getMaxHeight(); y++) {
                                         // Overworld
                                         Block block = ASkyBlock.getIslandWorld().getBlockAt(xCoord, y, zCoord);
                                         Material blockType = block.getType();
                                         Material setTo = Material.AIR;
-                                        // Split depending on below or above water line
+                                        // Split depending on below or above water line - changed to lava
                                         if (y < Settings.seaHeight) {
-                                            setTo = Material.STATIONARY_WATER;
+                                            setTo = Material.STATIONARY_LAVA;
                                         }
                                         // Grab anything out of containers (do that it is
                                         // destroyed)
                                         switch (blockType) {
-                                        case CHEST:
-                                        case TRAPPED_CHEST:
-                                        case FURNACE:
-                                        case DISPENSER:
-                                        case HOPPER:
-                                            final InventoryHolder ih = ((InventoryHolder)block.getState());
-                                            ih.getInventory().clear();
-                                            block.setType(setTo);
-                                            break;
-                                        case AIR:
-                                            if (setTo.equals(Material.STATIONARY_WATER)) {
-                                                nms.setBlockSuperFast(block, setTo.getId(), (byte)0, false);
-                                            }
-                                            break;
-                                        case STATIONARY_WATER:
-                                            if (setTo.equals(Material.AIR)) {
-                                                nms.setBlockSuperFast(block, setTo.getId(), (byte)0, false);
-                                            }
-                                            break;
-                                        default:
-                                            nms.setBlockSuperFast(block, setTo.getId(), (byte)0, false);
-                                            break;
+                                            case CHEST:
+                                            case TRAPPED_CHEST:
+                                            case FURNACE:
+                                            case DISPENSER:
+                                            case HOPPER:
+                                                final InventoryHolder ih = ((InventoryHolder) block.getState());
+                                                ih.getInventory().clear();
+                                                block.setType(setTo);
+                                                break;
+                                            case AIR:
+                                                //noinspection ConstantConditions
+                                                if (setTo.equals(Material.STATIONARY_WATER)) {
+                                                    nms.setBlockSuperFast(block, setTo.getId(), (byte) 0, false);
+                                                } else if (setTo.equals(Material.STATIONARY_LAVA)) {
+                                                    nms.setBlockSuperFast(block, setTo.getId(), (byte) 0, false);
+                                                }
+                                                break;
+                                            case STATIONARY_WATER:
+                                            case STATIONARY_LAVA:
+                                                if (setTo.equals(Material.AIR)) {
+                                                    nms.setBlockSuperFast(block, setTo.getId(), (byte) 0, false);
+                                                }
+                                                break;
+                                            default:
+                                                nms.setBlockSuperFast(block, setTo.getId(), (byte) 0, false);
+                                                break;
                                         }
                                         // Nether, if it exists
                                         if (Settings.newNether && Settings.createNether && y < ASkyBlock.getNetherWorld().getMaxHeight() - 8) {
@@ -140,18 +142,18 @@ public class DeleteIslandChunk {
                                                 // Grab anything out of containers (do that it is
                                                 // destroyed)
                                                 switch (blockType) {
-                                                case CHEST:
-                                                case TRAPPED_CHEST:
-                                                case FURNACE:
-                                                case DISPENSER:
-                                                case HOPPER:
-                                                    final InventoryHolder ih = ((InventoryHolder)block.getState());
-                                                    ih.getInventory().clear();
-                                                    block.setType(setTo);
-                                                    break;
-                                                default:
-                                                    nms.setBlockSuperFast(block, setTo.getId(), (byte)0, false);
-                                                    break;
+                                                    case CHEST:
+                                                    case TRAPPED_CHEST:
+                                                    case FURNACE:
+                                                    case DISPENSER:
+                                                    case HOPPER:
+                                                        final InventoryHolder ih = ((InventoryHolder) block.getState());
+                                                        ih.getInventory().clear();
+                                                        block.setType(setTo);
+                                                        break;
+                                                    default:
+                                                        nms.setBlockSuperFast(block, setTo.getId(), (byte) 0, false);
+                                                        break;
                                                 }
                                             }
                                         }
@@ -161,7 +163,7 @@ public class DeleteIslandChunk {
                         }
                         it.remove();
                     }
-                    if (chunksToClear.isEmpty()){
+                    if (chunksToClear.isEmpty()) {
                         plugin.getLogger().info("Finished island deletion");
                         this.cancel();
                     }
@@ -173,29 +175,29 @@ public class DeleteIslandChunk {
 
     private void gatherProtected(Island island) {
         // Get the min and max whole chunks
-        Pair<Integer, Integer> minWholeChunk = new Pair<>(nearest16(island.getMinProtectedX(), true), nearest16(island.getMinProtectedZ(), true) );
+        Pair<Integer, Integer> minWholeChunk = new Pair<>(nearest16(island.getMinProtectedX(), true), nearest16(island.getMinProtectedZ(), true));
         Pair<Integer, Integer> maxWholeChunk = new Pair<>(nearest16(island.getMinProtectedX() + Settings.islandProtectionRange, false), nearest16(island.getMinProtectedZ() + Settings.islandProtectionRange, false));
         // Get the chunks of the whole island
-        Pair<Integer, Integer> minChunk = new Pair<>((int) Math.floor((double)island.getMinProtectedX() / 16), (int) Math.floor((double)island.getMinProtectedZ() / 16));
-        Pair<Integer, Integer> maxChunk = new Pair<>((int) Math.floor((double)(island.getMinProtectedX() + Settings.islandProtectionRange) / 16),
-                (int) Math.floor((double)(island.getMinProtectedZ() + Settings.islandProtectionRange)  / 16));
+        Pair<Integer, Integer> minChunk = new Pair<>((int) Math.floor((double) island.getMinProtectedX() / 16), (int) Math.floor((double) island.getMinProtectedZ() / 16));
+        Pair<Integer, Integer> maxChunk = new Pair<>((int) Math.floor((double) (island.getMinProtectedX() + Settings.islandProtectionRange) / 16),
+                (int) Math.floor((double) (island.getMinProtectedZ() + Settings.islandProtectionRange) / 16));
         regenerate(island.getCenter().getWorld(), minWholeChunk, maxWholeChunk, minChunk, maxChunk);
 
     }
 
     private void gatherWholeIsland(Island island) {
         // Get the min and max whole chunks
-        Pair<Integer, Integer> minWholeChunk = new Pair<>(nearest16(island.getMinX(), true), nearest16(island.getMinZ(), true) );
+        Pair<Integer, Integer> minWholeChunk = new Pair<>(nearest16(island.getMinX(), true), nearest16(island.getMinZ(), true));
         Pair<Integer, Integer> maxWholeChunk = new Pair<>(nearest16(island.getMinX() + Settings.islandDistance, false), nearest16(island.getMinZ() + Settings.islandDistance, false));
         // Get the chunks of the whole island
-        Pair<Integer, Integer> minChunk = new Pair<>((int) Math.floor((double)island.getMinX() / 16), (int) Math.floor((double)island.getMinZ() / 16));
-        Pair<Integer, Integer> maxChunk = new Pair<>((int) Math.floor((double)(island.getMinX() + Settings.islandDistance) / 16),
-                (int) Math.floor((double)(island.getMinZ() + Settings.islandDistance)  / 16));
+        Pair<Integer, Integer> minChunk = new Pair<>((int) Math.floor((double) island.getMinX() / 16), (int) Math.floor((double) island.getMinZ() / 16));
+        Pair<Integer, Integer> maxChunk = new Pair<>((int) Math.floor((double) (island.getMinX() + Settings.islandDistance) / 16),
+                (int) Math.floor((double) (island.getMinZ() + Settings.islandDistance) / 16));
         regenerate(island.getCenter().getWorld(), minWholeChunk, maxWholeChunk, minChunk, maxChunk);
     }
 
     private void regenerate(World world, Pair<Integer, Integer> minWholeChunk, Pair<Integer, Integer> maxWholeChunk,
-            Pair<Integer, Integer> minChunk, Pair<Integer, Integer> maxChunk) {
+                            Pair<Integer, Integer> minChunk, Pair<Integer, Integer> maxChunk) {
         for (int i = minChunk.x; i <= maxChunk.x; i++) {
             for (int j = minChunk.z; j <= maxChunk.z; j++) {
                 if (i >= minWholeChunk.x && i <= maxWholeChunk.x && j >= minWholeChunk.z && j <= maxWholeChunk.z) {

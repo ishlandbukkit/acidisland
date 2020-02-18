@@ -1358,7 +1358,7 @@ public class Schematic {
             for (int x_space = x - 4; x_space <= x + 4; x_space += 8) {
                 for (int z_space = z - 4; z_space <= z + 4; z_space += 8) {
                     final Block b = world.getBlockAt(x_space, y, z_space);
-                    b.setType(Material.STATIONARY_WATER);
+                    b.setType(Material.STATIONARY_LAVA);
                 }
             }
         }
